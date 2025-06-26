@@ -83,6 +83,17 @@ namespace bicvos
       {
       }
 
+      bool Publish(const MessageT &msg)
+    {
+      bicvos::timestamp_t time;
+      #if defined(PLATFORM_X86) || defined(ANDROID)
+      time = std::chrono::steady_clock::now().time_since_epoch().count();
+      #else
+      time = bicvos::synced_time::GetSyncedTime();
+      #endif
+      return Publish(msg, time);
+    }
+
       void Publish(const MessageT &msg)
       {
         bicvos::timestamp_t time;
@@ -93,9 +104,24 @@ namespace bicvos
         #endif
         Publish(msg, time);
       }
-      void Publish(const MessageT &msg, bicvos::timestamp_t timestamp) {
-        eprosima::fastrtps::Time_t now(static_cast<int32_t>(timestamp / 1000000000), static_cast<uint32_t>(timestamp % 1000000000));
-        dds_writer_->write_w_timestamp(const_cast<void*>(static_cast<const void*>(&msg)), fdds::HANDLE_NIL, now);
+      bool Publish(const MessageT &msg, bicvos::timestamp_t timestamp) {
+        dds_return_t rc;
+        rc = dds_write_ts(dds_writer_,&msg, timestamp);
+
+        if (rc < 0) {
+          LogError << "topic " << topic_name_ << " write failed, msg size: " 
+                  << sizeof(msg) << ", timestamp: " << timestamp << ", error code: " 
+                  << dds_strretcode(-rc) << std::endl;
+          return false;
+        }
+        return true;
+      }
+
+      uint64_t GetInstanceHandle() {
+        return instance_handle_;
+      }
+      GuidType GetEntityGuid() {
+        return guid_;
       }
       #ifndef ANDROID
       void Publish(const MessageT &msg, PublishFinishCallback on_finish) {
