@@ -12,7 +12,9 @@ int main()
  
     // Overwrite element at position 2
     v[2] = -1;
- 
+    v.push_back(7);
+    v.push_back(3);
+     
     // Print out the vector
     for (int n : v)
         std::cout << n << ' ';
